@@ -3,8 +3,10 @@ name: github pages
 on:
   push:
     branches: [ main ]
-
   workflow_dispatch:
+
+permissions:
+  contents: write  # actions-gh-pagesがpushできるように権限を明示
 
 jobs:
   build:
@@ -20,15 +22,17 @@ jobs:
         run: |
           REPOSITORY=$(echo ${{ github.repository }} | sed -e "s#.*/##")
           echo ::set-output name=repository::$REPOSITORY
+
       - name: Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.22.2'
           channel: 'stable'
           cache: true
+
       - run: flutter --version
       - run: flutter pub get
-      - run: flutter build web --web-renderer html --base-href /${{ replace(steps.version.outputs.repository, '.git', '') }}/
+      - run: flutter build web --web-renderer html --base-href /${{ steps.version.outputs.repository }}/
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
