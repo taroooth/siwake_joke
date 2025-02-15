@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:html';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Strategyパターン: API通信処理の抽象インターフェース
 abstract class ContentRepository {
@@ -19,7 +18,7 @@ class ContentRepositoryImpl implements ContentRepository {
 
   @override
   Future<String> generateContent(String input) async {
-    final apiKey = dotenv.env['API_KEY'];
+    const apiKey = String.fromEnvironment('API_KEY');
     final url =
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey';
     // Adapterパターン: ユーザー入力をAPIのリクエスト形式に変換
@@ -68,7 +67,6 @@ class ContentController {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
   runApp(MyApp());
 }
 
