@@ -176,6 +176,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: '仕訳に変換',
       debugShowCheckedModeBanner: false,
       home: HomePage(),
     );
@@ -223,7 +224,7 @@ class _HomePageState extends State<HomePage> {
     final sampleCard = _card(
       [
         Shiwake(
-          karikata: Karikata(kamoku: '幸福感', amount: 300),
+          karikata: Karikata(kamoku: '（例）幸福感', amount: 300),
           kashikata: Kashikata(kamoku: '朝ごはん', amount: 300),
         ),
       ],
@@ -265,7 +266,7 @@ class _HomePageState extends State<HomePage> {
                   child: TextField(
                     maxLength: 30,
                     decoration: const InputDecoration(
-                      hintText: '例：朝ごはんが美味しかった',
+                      hintText: '（例）朝ごはんが美味しかった',
                       border: OutlineInputBorder(),
                     ),
                     onChanged: (value) {
