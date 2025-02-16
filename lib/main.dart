@@ -35,10 +35,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final FetchContentUseCase _useCase =
       FetchContentUseCase(ContentRepositoryImpl());
+  final _textEditingController = TextEditingController();
   List<Shiwake>? _shiwakeList;
   bool _loading = false;
   String _error = '';
   String _input = '';
+  String _prevInput = '';
 
   void _handleSubmit() async {
     // Commandパターン: ユーザーの操作を命令として実行
@@ -48,9 +50,19 @@ class _HomePageState extends State<HomePage> {
     });
     try {
       final shiwakeList = await _useCase.call(_input);
+      if (shiwakeList.isEmpty) {
+        setState(() {
+          _error = 'エラー：AIが理解できませんでした';
+        });
+        return;
+      }
       // Observerパターン: 状態変化をsetStateで通知
       setState(() {
         _shiwakeList = shiwakeList;
+        _prevInput = _input;
+        _input = '';
+        _textEditingController.clear();
+        _error = '';
       });
     } catch (e) {
       setState(() {
@@ -105,20 +117,16 @@ class _HomePageState extends State<HomePage> {
                             ? sampleCard
                             : Column(
                                 children: [
+                                  Text(_prevInput),
                                   _card(_shiwakeList!),
-                                  TextButton(
-                                    onPressed: () {
-                                      // Twitterでシェアする処理
-                                    },
-                                    child: const Text('結果をシェア'),
-                                  ),
                                 ],
                               ),
                 const SizedBox(height: 32),
                 SizedBox(
                   width: MediaQuery.of(context).size.width * 0.8,
                   child: TextField(
-                    maxLength: 30,
+                    controller: _textEditingController,
+                    maxLength: 50,
                     decoration: const InputDecoration(
                       hintText: '（例）朝ごはんが美味しかった',
                       border: OutlineInputBorder(),
@@ -166,7 +174,7 @@ class _HomePageState extends State<HomePage> {
             return Text(
               '${karikata.kamoku} ${karikata.amount} / ${kashikata.kamoku} ${kashikata.amount}',
               style: const TextStyle(
-                fontSize: 20,
+                fontSize: 18,
               ),
             );
           }).toList(),
