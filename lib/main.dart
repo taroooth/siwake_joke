@@ -19,7 +19,6 @@ class ContentRepositoryImpl implements ContentRepository {
   @override
   Future<String> generateContent(String input) async {
     const apiKey = String.fromEnvironment('API_KEY');
-    return 'APIキー: $apiKey, ${apiKey.isEmpty}';
     final url =
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey';
     // Adapterパターン: ユーザー入力をAPIのリクエスト形式に変換
