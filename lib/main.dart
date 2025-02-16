@@ -1,70 +1,21 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:siwake_joke/domain/usecase/fetch_content_use_case.dart';
+import 'package:siwake_joke/infrastructure/repository/content_repository_impl.dart';
 import 'package:siwake_joke/model/shiwake/karikata.dart';
 import 'package:siwake_joke/model/shiwake/kashikata.dart';
 import 'package:siwake_joke/model/shiwake/shiwake.dart';
 
-// Strategyパターン: API通信処理の抽象インターフェース
-abstract class ContentRepository {
-  Future<List<Shiwake>> generateContent(String input);
-}
-
-// Singletonパターン: ContentRepositoryの実装をシングルトン化
-class ContentRepositoryImpl implements ContentRepository {
-  ContentRepositoryImpl._internal();
-
-  static final ContentRepositoryImpl _instance =
-      ContentRepositoryImpl._internal();
-
-  factory ContentRepositoryImpl() => _instance; // Factoryパターン
-
-  @override
-  Future<List<Shiwake>> generateContent(String input) async {
-    final url = Uri.parse(
-      'https://us-central1-shiwake-joke.cloudfunctions.net/generateContent/',
-    );
-
-    final body = jsonEncode({'input': input});
-
-    final httpResponse = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: body,
-    );
-
-    if (httpResponse.statusCode == 200) {
-      // レスポンス全体がList型の場合の処理
-      final responseList = jsonDecode(httpResponse.body) as List;
-      return responseList
-          .map((json) => Shiwake.fromJson(json as Map<String, dynamic>))
-          .toList();
-    } else {
-      throw Exception('API呼び出しエラー: ${httpResponse.statusCode}');
-    }
-  }
-}
-
-// MVCパターン: ビジネスロジックを管理するControllerクラス
-class ContentController {
-  final ContentRepository repository = ContentRepositoryImpl();
-
-  // Commandパターン: API通信命令の実行
-  Future<List<Shiwake>> fetchContent(String input) {
-    return repository.generateContent(input);
-  }
-}
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  // MVCパターン: アプリ全体のView（Controllerと連携）
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       title: '仕訳に変換',
       debugShowCheckedModeBanner: false,
       home: HomePage(),
@@ -73,13 +24,17 @@ class MyApp extends StatelessWidget {
 }
 
 class HomePage extends StatefulWidget {
-  // MVCパターン: View部分を担当
+  const HomePage({super.key});
+
   @override
-  _HomePageState createState() => _HomePageState();
+  State<StatefulWidget> createState() {
+    return _HomePageState();
+  }
 }
 
 class _HomePageState extends State<HomePage> {
-  final ContentController _controller = ContentController();
+  final FetchContentUseCase _useCase =
+      FetchContentUseCase(ContentRepositoryImpl());
   List<Shiwake>? _shiwakeList;
   bool _loading = false;
   String _error = '';
@@ -92,7 +47,7 @@ class _HomePageState extends State<HomePage> {
       _error = '';
     });
     try {
-      final shiwakeList = await _controller.fetchContent(_input);
+      final shiwakeList = await _useCase.call(_input);
       // Observerパターン: 状態変化をsetStateで通知
       setState(() {
         _shiwakeList = shiwakeList;
@@ -148,7 +103,17 @@ class _HomePageState extends State<HomePage> {
                         ? Text(_error)
                         : _shiwakeList == null
                             ? sampleCard
-                            : _card(_shiwakeList!),
+                            : Column(
+                                children: [
+                                  _card(_shiwakeList!),
+                                  TextButton(
+                                    onPressed: () {
+                                      // Twitterでシェアする処理
+                                    },
+                                    child: const Text('結果をシェア'),
+                                  ),
+                                ],
+                              ),
                 const SizedBox(height: 32),
                 SizedBox(
                   width: MediaQuery.of(context).size.width * 0.8,
