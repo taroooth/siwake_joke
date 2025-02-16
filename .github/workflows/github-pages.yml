@@ -31,6 +31,7 @@ jobs:
           cache: true
 
       - run: flutter --version
+      - run: flutter clean
       - run: flutter pub get
       - run: flutter build web --web-renderer html --dart-define=API_KEY=${{ secrets.API_KEY }} --base-href /${{ steps.version.outputs.repository }}/
 
