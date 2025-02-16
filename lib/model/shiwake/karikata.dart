@@ -11,4 +11,12 @@ class Karikata implements AccountHeading {
     required this.kamoku,
     required this.amount,
   });
+
+  @override
+  factory Karikata.fromJson(Map<String, dynamic> json) {
+    return Karikata(
+      kamoku: json['kamoku'] as String,
+      amount: json['amount'] as int,
+    );
+  }
 }

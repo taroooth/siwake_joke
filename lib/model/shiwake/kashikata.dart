@@ -11,4 +11,12 @@ class Kashikata implements AccountHeading {
     required this.kamoku,
     required this.amount,
   });
+
+  @override
+  factory Kashikata.fromJson(Map<String, dynamic> json) {
+    return Kashikata(
+      kamoku: json['kamoku'] as String,
+      amount: json['amount'] as int,
+    );
+  }
 }

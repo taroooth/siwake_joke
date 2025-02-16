@@ -12,14 +12,8 @@ class Shiwake {
 
   factory Shiwake.fromJson(Map<String, dynamic> json) {
     return Shiwake(
-      karikata: Karikata(
-        kamoku: json['karikata']['kamoku'] as String,
-        amount: json['karikata']['amount'] as int,
-      ),
-      kashikata: Kashikata(
-        kamoku: json['kashikata']['kamoku'] as String,
-        amount: json['kashikata']['amount'] as int,
-      ),
+      karikata: Karikata.fromJson(json['karikata'] as Map<String, dynamic>),
+      kashikata: Kashikata.fromJson(json['kashikata'] as Map<String, dynamic>),
     );
   }
 }

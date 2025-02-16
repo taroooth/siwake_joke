@@ -189,7 +189,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _textController = TextEditingController();
   final ContentController _controller = ContentController();
-  String _result = '';
+  List<Shiwake> _shiwakeList = [];
   bool _loading = false;
   String _error = '';
 
@@ -203,10 +203,7 @@ class _HomePageState extends State<HomePage> {
       final shiwakeList = await _controller.fetchContent(_textController.text);
       // Observerパターン: 状態変化をsetStateで通知
       setState(() {
-        _result = shiwakeList
-            .map((shiwake) =>
-                '借方: ${shiwake.karikata.kamoku} ${shiwake.karikata.amount}円\n貸方: ${shiwake.kashikata.kamoku} ${shiwake.kashikata.amount}円\n')
-            .join('\n');
+        _shiwakeList = shiwakeList;
       });
     } catch (e) {
       print('エラーが発生しました: $e');
@@ -237,10 +234,17 @@ class _HomePageState extends State<HomePage> {
                   ? const CircularProgressIndicator()
                   : _error.isNotEmpty
                       ? Text(_error)
-                      : Text(
-                          _result,
-                          style: const TextStyle(fontSize: 24),
-                          textAlign: TextAlign.center,
+                      : Column(
+                          children: _shiwakeList
+                              .map(
+                                (shiwake) => Card(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text('${shiwake.karikata.kamoku} ${shiwake.karikata.amount} / ${shiwake.kashikata.kamoku} ${shiwake.kashikata.amount}'),
+                                  ),
+                                ),
+                              )
+                              .toList(),
                         ),
               const SizedBox(height: 32),
               TextField(
