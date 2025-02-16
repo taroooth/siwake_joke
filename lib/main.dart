@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;
 import 'package:siwake_joke/model/shiwake/karikata.dart';
 import 'package:siwake_joke/model/shiwake/kashikata.dart';
 import 'package:siwake_joke/model/shiwake/shiwake.dart';
@@ -21,138 +21,27 @@ class ContentRepositoryImpl implements ContentRepository {
 
   @override
   Future<List<Shiwake>> generateContent(String input) async {
-    const apiKey = String.fromEnvironment('API_KEY');
-    final schema = Schema.array(
-      description: '面白い仕訳',
-      items: Schema.object(
-        properties: {
-          'karikata': Schema.object(
-            description: '借方',
-            nullable: false,
-            properties: {
-              'kamoku': Schema.string(
-                description: '科目',
-                nullable: false,
-              ),
-              'amount': Schema.integer(
-                description: '金額',
-                nullable: false,
-              ),
-            },
-            requiredProperties: [
-              'kamoku',
-              'amount',
-            ],
-          ),
-          'kashikata': Schema.object(
-            description: '貸方',
-            nullable: false,
-            properties: {
-              'kamoku': Schema.string(
-                description: '科目',
-                nullable: false,
-              ),
-              'amount': Schema.integer(
-                description: '金額',
-                nullable: false,
-              ),
-            },
-            requiredProperties: [
-              'kamoku',
-              'amount',
-            ],
-          ),
-        },
-        requiredProperties: [
-          'karikata',
-          'kashikata',
-        ],
-      ),
+    final url = Uri.parse(
+      'https://us-central1-shiwake-joke.cloudfunctions.net/generateContent/',
     );
 
-    final model = GenerativeModel(
-      model: 'gemini-2.0-flash-lite-preview-02-05',
-      apiKey: apiKey,
-      generationConfig: GenerationConfig(
-        responseMimeType: 'application/json',
-        responseSchema: schema,
-      ),
+    final body = jsonEncode({'input': input});
+
+    final httpResponse = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
     );
 
-    final prompt = '''
-    以下の例を参考にして、面白い仕訳を生成してください。
-    入力例①：ベットに向かう途中でチョコレートを口に入れた矢先にくしゃみが出て、寝具が汚れました😭
-    出力例①：
-      [
-        {
-          'karikata': {
-            'kamoku': 'チョコ発射損',
-            'amount': 200,
-          },
-          'kashikata': {
-            'kamoku': 'チョコ',
-            'amount': 200,
-          }
-        },
-        {
-          'karikata': {
-            'kamoku': '寝具評価損',
-            'amount': 200,
-          },
-          'kashikata': {
-            'kamoku': '寝具',
-            'amount': 200,
-          }
-        },
-      ]
-    入力例②：奥様が昨日から泊まりで福岡に行っていたからやったー自由な時間ができた！って仕事してました…
-    出力例②：
-      [
-        {
-          'karikata': {
-            'kamoku': '時間',
-            'amount': 500,
-          },
-          'kashikata': {
-            'kamoku': '自由時間発生益',
-            'amount': 500,
-          }
-        },
-        {
-          'karikata': {
-            'kamoku': '未成業務支出金',
-            'amount': 500,
-          },
-          'kashikata': {
-            'kamoku': '時間',
-            'amount': 500,
-          }
-        },
-      ]
-    入力例③：豚骨ラーメン食べた
-    出力例③：
-      [
-        {
-          'karikata': {
-            'kamoku': '脂肪',
-            'amount': 500,
-          },
-          'kashikata': {
-            'kamoku': '豚骨ラーメン',
-            'amount': 500,
-          }
-        },
-      ]
-    
-    今回の入力は以下です。
-    $input
-    ''';
-    final response = await model.generateContent([Content.text(prompt)]);
-    final responseString = response.text ?? '[]';
-    final responseJson = jsonDecode(responseString) as List;
-    return responseJson
-        .map((json) => Shiwake.fromJson(json as Map<String, dynamic>))
-        .toList();
+    if (httpResponse.statusCode == 200) {
+      // レスポンス全体がList型の場合の処理
+      final responseList = jsonDecode(httpResponse.body) as List;
+      return responseList
+          .map((json) => Shiwake.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } else {
+      throw Exception('API呼び出しエラー: ${httpResponse.statusCode}');
+    }
   }
 }
 
