@@ -264,7 +264,6 @@ class _HomePageState extends State<HomePage> {
                   width: MediaQuery.of(context).size.width * 0.8,
                   child: TextField(
                     maxLength: 30,
-                    maxLines: 3,
                     decoration: const InputDecoration(
                       hintText: '例：朝ごはんが美味しかった',
                       border: OutlineInputBorder(),
