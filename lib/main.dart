@@ -1,7 +1,8 @@
 import 'dart:convert';
-import 'dart:html';
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:siwake_joke/model/shiwake/karikata.dart';
+import 'package:siwake_joke/model/shiwake/kashikata.dart';
 import 'package:siwake_joke/model/shiwake/shiwake.dart';
 
 // Strategyパターン: API通信処理の抽象インターフェース
@@ -175,6 +176,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: HomePage(),
     );
   }
@@ -187,11 +189,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final _textController = TextEditingController();
   final ContentController _controller = ContentController();
-  List<Shiwake> _shiwakeList = [];
+  List<Shiwake>? _shiwakeList;
   bool _loading = false;
   String _error = '';
+  String _input = '';
 
   void _handleSubmit() async {
     // Commandパターン: ユーザーの操作を命令として実行
@@ -200,13 +202,12 @@ class _HomePageState extends State<HomePage> {
       _error = '';
     });
     try {
-      final shiwakeList = await _controller.fetchContent(_textController.text);
+      final shiwakeList = await _controller.fetchContent(_input);
       // Observerパターン: 状態変化をsetStateで通知
       setState(() {
         _shiwakeList = shiwakeList;
       });
     } catch (e) {
-      print('エラーが発生しました: $e');
       setState(() {
         _error = 'エラーが発生しました: $e';
       });
@@ -219,14 +220,35 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final sampleCard = _card(
+      [
+        Shiwake(
+          karikata: Karikata(kamoku: '幸福感', amount: 300),
+          kashikata: Kashikata(kamoku: '朝ごはん', amount: 300),
+        ),
+      ],
+    );
+    final buttonIsEnabled = !_loading && _input.isNotEmpty;
     // Observerパターン: 状態変化によりUIを更新
     return Scaffold(
       appBar: AppBar(
-        title: const Text('API通信デモ'),
+        backgroundColor: const Color(0XFF27BA74),
+        elevation: 10,
+        title: const Text(
+          'あなたの出来事を仕訳に変換',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 32,
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -234,33 +256,62 @@ class _HomePageState extends State<HomePage> {
                   ? const CircularProgressIndicator()
                   : _error.isNotEmpty
                       ? Text(_error)
-                      : Column(
-                          children: _shiwakeList
-                              .map(
-                                (shiwake) => Card(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Text('${shiwake.karikata.kamoku} ${shiwake.karikata.amount} / ${shiwake.kashikata.kamoku} ${shiwake.kashikata.amount}'),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                        ),
+                      : _shiwakeList == null
+                          ? sampleCard
+                          : _card(_shiwakeList!),
               const SizedBox(height: 32),
-              TextField(
-                controller: _textController,
-                decoration: const InputDecoration(
-                  labelText: '自由入力してください',
-                  border: OutlineInputBorder(),
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.8,
+                child: TextField(
+                  maxLength: 30,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    hintText: '例：朝ごはんが美味しかった',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _input = value;
+                    });
+                  },
                 ),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: _loading ? null : _handleSubmit,
-                child: const Text('送信'),
+                onPressed: buttonIsEnabled ? _handleSubmit : null,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(200, 60),
+                ),
+                child: const Text(
+                  '送信',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _card(List<Shiwake> list) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          children: list.map((shiwake) {
+            final karikata = shiwake.karikata;
+            final kashikata = shiwake.kashikata;
+            return Text(
+              '${karikata.kamoku} ${karikata.amount} / ${kashikata.kamoku} ${kashikata.amount}',
+              style: const TextStyle(
+                fontSize: 20,
+              ),
+            );
+          }).toList(),
         ),
       ),
     );
