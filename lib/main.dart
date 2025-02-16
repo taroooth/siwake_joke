@@ -243,54 +243,55 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 32,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _loading
-                  ? const CircularProgressIndicator()
-                  : _error.isNotEmpty
-                      ? Text(_error)
-                      : _shiwakeList == null
-                          ? sampleCard
-                          : _card(_shiwakeList!),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: MediaQuery.of(context).size.width * 0.8,
-                child: TextField(
-                  maxLength: 30,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    hintText: '例：朝ごはんが美味しかった',
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _input = value;
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: buttonIsEnabled ? _handleSubmit : null,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(200, 60),
-                ),
-                child: const Text(
-                  '送信',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 32,
+            ),
+            child: Column(
+              children: [
+                _loading
+                    ? const CircularProgressIndicator()
+                    : _error.isNotEmpty
+                        ? Text(_error)
+                        : _shiwakeList == null
+                            ? sampleCard
+                            : _card(_shiwakeList!),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.8,
+                  child: TextField(
+                    maxLength: 30,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      hintText: '例：朝ごはんが美味しかった',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _input = value;
+                      });
+                    },
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: buttonIsEnabled ? _handleSubmit : null,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(200, 60),
+                  ),
+                  child: const Text(
+                    '送信',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
