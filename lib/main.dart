@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:html';
 import 'package:flutter/material.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:siwake_joke/model/shiwake/shiwake.dart';
 
 // Strategyパターン: API通信処理の抽象インターフェース
 abstract class ContentRepository {
-  Future<String> generateContent(String input);
+  Future<List<Shiwake>> generateContent(String input);
 }
 
 // Singletonパターン: ContentRepositoryの実装をシングルトン化
@@ -17,41 +19,139 @@ class ContentRepositoryImpl implements ContentRepository {
   factory ContentRepositoryImpl() => _instance; // Factoryパターン
 
   @override
-  Future<String> generateContent(String input) async {
+  Future<List<Shiwake>> generateContent(String input) async {
     const apiKey = String.fromEnvironment('API_KEY');
-    final url =
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey';
-    // Adapterパターン: ユーザー入力をAPIのリクエスト形式に変換
-    final requestData = jsonEncode({
-      'contents': [
+    final schema = Schema.array(
+      description: '面白い仕訳',
+      items: Schema.object(
+        properties: {
+          'karikata': Schema.object(
+            description: '借方',
+            nullable: false,
+            properties: {
+              'kamoku': Schema.string(
+                description: '科目',
+                nullable: false,
+              ),
+              'amount': Schema.integer(
+                description: '金額',
+                nullable: false,
+              ),
+            },
+            requiredProperties: [
+              'kamoku',
+              'amount',
+            ],
+          ),
+          'kashikata': Schema.object(
+            description: '貸方',
+            nullable: false,
+            properties: {
+              'kamoku': Schema.string(
+                description: '科目',
+                nullable: false,
+              ),
+              'amount': Schema.integer(
+                description: '金額',
+                nullable: false,
+              ),
+            },
+            requiredProperties: [
+              'kamoku',
+              'amount',
+            ],
+          ),
+        },
+        requiredProperties: [
+          'karikata',
+          'kashikata',
+        ],
+      ),
+    );
+
+    final model = GenerativeModel(
+      model: 'gemini-2.0-flash-lite-preview-02-05',
+      apiKey: apiKey,
+      generationConfig: GenerationConfig(
+        responseMimeType: 'application/json',
+        responseSchema: schema,
+      ),
+    );
+
+    final prompt = '''
+    以下の例を参考にして、面白い仕訳を生成してください。
+    入力例①：ベットに向かう途中でチョコレートを口に入れた矢先にくしゃみが出て、寝具が汚れました😭
+    出力例①：
+      [
         {
-          'parts': [
-            {'text': input}
-          ]
-        }
+          'karikata': {
+            'kamoku': 'チョコ発射損',
+            'amount': 200,
+          },
+          'kashikata': {
+            'kamoku': 'チョコ',
+            'amount': 200,
+          }
+        },
+        {
+          'karikata': {
+            'kamoku': '寝具評価損',
+            'amount': 200,
+          },
+          'kashikata': {
+            'kamoku': '寝具',
+            'amount': 200,
+          }
+        },
       ]
-    });
-    try {
-      final response = await HttpRequest.request(
-        url,
-        method: 'POST',
-        sendData: requestData,
-        requestHeaders: {'Content-Type': 'application/json'},
-      );
-      if (response.status == 200) {
-        final jsonResponse = jsonDecode(response.responseText!);
-        return jsonResponse['candidates'][0]['content']['parts'][0]['text']
-            as String;
-      } else {
-        throw Exception('APIエラー: ${response.status}');
-      }
-    } catch (e) {
-      print('エラーが発生しました: $e');
-      if (e is ProgressEvent) {
-        throw Exception('ネットワークエラー: CORS設定やオリジンの許可を確認してください ($e)');
-      }
-      throw Exception('ネットワークエラー: $e');
-    }
+    入力例②：奥様が昨日から泊まりで福岡に行っていたからやったー自由な時間ができた！って仕事してました…
+    出力例②：
+      [
+        {
+          'karikata': {
+            'kamoku': '時間',
+            'amount': 500,
+          },
+          'kashikata': {
+            'kamoku': '自由時間発生益',
+            'amount': 500,
+          }
+        },
+        {
+          'karikata': {
+            'kamoku': '未成業務支出金',
+            'amount': 500,
+          },
+          'kashikata': {
+            'kamoku': '時間',
+            'amount': 500,
+          }
+        },
+      ]
+    入力例③：豚骨ラーメン食べた
+    出力例③：
+      [
+        {
+          'karikata': {
+            'kamoku': '脂肪',
+            'amount': 500,
+          },
+          'kashikata': {
+            'kamoku': '豚骨ラーメン',
+            'amount': 500,
+          }
+        },
+      ]
+    
+    今回の入力は以下です。
+    $input
+    ''';
+    final response = await model.generateContent([Content.text(prompt)]);
+    final responseString = response.text ?? '[]';
+    final responseJson = jsonDecode(responseString) as List;
+    return responseJson
+        .map((json) => Shiwake.fromJson(json as Map<String, dynamic>))
+        .toList();
   }
 }
 
@@ -60,7 +160,7 @@ class ContentController {
   final ContentRepository repository = ContentRepositoryImpl();
 
   // Commandパターン: API通信命令の実行
-  Future<String> fetchContent(String input) {
+  Future<List<Shiwake>> fetchContent(String input) {
     return repository.generateContent(input);
   }
 }
@@ -75,7 +175,6 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Web API Demo',
       home: HomePage(),
     );
   }
@@ -101,10 +200,13 @@ class _HomePageState extends State<HomePage> {
       _error = '';
     });
     try {
-      String content = await _controller.fetchContent(_textController.text);
+      final shiwakeList = await _controller.fetchContent(_textController.text);
       // Observerパターン: 状態変化をsetStateで通知
       setState(() {
-        _result = content;
+        _result = shiwakeList
+            .map((shiwake) =>
+                '借方: ${shiwake.karikata.kamoku} ${shiwake.karikata.amount}円\n貸方: ${shiwake.kashikata.kamoku} ${shiwake.kashikata.amount}円\n')
+            .join('\n');
       });
     } catch (e) {
       print('エラーが発生しました: $e');
@@ -134,12 +236,12 @@ class _HomePageState extends State<HomePage> {
               _loading
                   ? const CircularProgressIndicator()
                   : _error.isNotEmpty
-                  ? Text(_error)
-                  : Text(
-                _result,
-                style: const TextStyle(fontSize: 24),
-                textAlign: TextAlign.center,
-              ),
+                      ? Text(_error)
+                      : Text(
+                          _result,
+                          style: const TextStyle(fontSize: 24),
+                          textAlign: TextAlign.center,
+                        ),
               const SizedBox(height: 32),
               TextField(
                 controller: _textController,
