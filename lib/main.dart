@@ -299,6 +299,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _card(List<Shiwake> list) {
+    if (list.isEmpty) {
+      return const Text('データがありません');
+    }
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(32),
